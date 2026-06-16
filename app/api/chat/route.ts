@@ -11,11 +11,24 @@ export async function POST(req: Request) {
       return new Response('Missing provider or model', { status: 400 });
     }
 
-    if (!config || !config.apiKey) {
-      return new Response(`Missing API key for ${provider}`, { status: 401 });
+    let apiKey = config?.apiKey;
+
+    // Fallback to server-side environment variables if the client didn't provide a key
+    if (!apiKey) {
+      if (provider === 'gemini') {
+        apiKey = process.env.gemeni_api_for_elize || process.env.GEMINI_API_KEY;
+      } else if (provider === 'openai') {
+        apiKey = process.env.OPENAI_API_KEY;
+      } else if (provider === 'anthropic') {
+        apiKey = process.env.ANTHROPIC_API_KEY;
+      }
     }
 
-    const aiProvider = getProvider(provider as ProviderType, config as ProviderConfig);
+    if (!apiKey) {
+      return new Response(`Missing API key for ${provider}. Please add it in Settings.`, { status: 401 });
+    }
+
+    const aiProvider = getProvider(provider as ProviderType, { apiKey });
 
     const result = await streamText({
       // @ts-ignore - Provider mismatch between ai v3 and latest provider SDKs
