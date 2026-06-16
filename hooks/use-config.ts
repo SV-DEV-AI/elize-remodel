@@ -23,7 +23,7 @@ export const useConfig = create<ConfigState>()(
         anthropicKey: '',
         geminiKey: '',
         provider: 'gemini',
-        model: 'gemini-pro',
+        model: 'gemini-2.0-flash',
       },
       setConfig: (newConfig) =>
         set((state) => ({ config: { ...state.config, ...newConfig } })),
