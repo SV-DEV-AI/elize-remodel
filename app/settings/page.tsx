@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { KeyRound, CheckCircle2 } from "lucide-react";
+import { KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 
 export default function SettingsPage() {
@@ -36,6 +36,16 @@ export default function SettingsPage() {
           <p className="text-muted-foreground">
             Manage your API keys to use different AI providers. Keys are stored locally in your browser and are never saved to our servers.
           </p>
+        </div>
+
+        <div className="bg-orange-500/10 border border-orange-500/20 text-orange-200 p-4 rounded-xl flex items-start gap-3 backdrop-blur-sm">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-orange-400" />
+          <div className="space-y-1">
+            <h3 className="font-medium text-orange-400">Testing Project Disclaimer</h3>
+            <p className="text-sm opacity-90 leading-relaxed">
+              Elize AI is currently a testing project. The default API keys provided by the server may be rate-limited, restricted, or completely disabled. <strong>Please add your own personal API keys below</strong> to ensure a stable, uninterrupted experience.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-6 bg-white/5 border border-white/10 p-6 rounded-xl backdrop-blur-sm">
