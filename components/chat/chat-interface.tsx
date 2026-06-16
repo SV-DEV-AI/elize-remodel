@@ -147,7 +147,7 @@ export function ChatInterface() {
           {error && (
             <div className="flex items-center gap-2 text-red-400 bg-red-400/10 p-3 rounded-lg text-sm max-w-3xl mx-auto">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <p>Failed to get response. Please check your API keys in Settings.</p>
+              <p>{error.message || "Failed to get response. Please check your API keys in Settings."}</p>
             </div>
           )}
         </div>

@@ -1,0 +1,8 @@
+{
+  "messages": [{"role": "user", "content": "hi"}],
+  "provider": "gemini",
+  "model": "gemini-2.5-flash",
+  "config": {
+    "apiKey": "test_key"
+  }
+}
