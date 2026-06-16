@@ -1,15 +1,14 @@
 import os
 import logging
-from fastapi import FastAPI, Request
-from telegram import Update, Bot
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from google import genai
 from google.genai import types
 
 # ----------------------------------------------------------------------
 # Configuration
 # ----------------------------------------------------------------------
-# Note: On Vercel, it's best to move these to Environment Variables later!
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 SPECIFIC_TOPIC = "Python programming"
@@ -17,17 +16,25 @@ SYSTEM_INSTRUCTION = (
     f"You are a highly specialized assistant focused ONLY on {SPECIFIC_TOPIC}. "
     f"If a user asks anything outside of this exact topic, you must politely "
     f"decline to answer and guide them back to {SPECIFIC_TOPIC}. "
-    f"Keep your answers short since we are on a 10-second serverless timeout."
+    f"Keep your answers engaging but concise."
 )
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
+# ----------------------------------------------------------------------
+# App Initialization
+# ----------------------------------------------------------------------
 app = FastAPI()
 
-# Initialize Telegram Bot (Stateless)
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
+# Allow CORS so the frontend can easily call this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize GenAI Client
 try:
@@ -37,41 +44,28 @@ except Exception as e:
     client = None
 
 # ----------------------------------------------------------------------
-# Helper Functions
+# Models
 # ----------------------------------------------------------------------
-async def process_update(update: Update):
-    """Processes a single incoming Telegram Update."""
-    if not update.message or not update.message.text:
-        return
+class ChatRequest(BaseModel):
+    message: str
 
-    chat_id = update.effective_chat.id
-    user_text = update.message.text
+class ChatResponse(BaseModel):
+    reply: str
 
-    # Handle /start
-    if user_text.startswith('/start'):
-        await bot.send_message(
-            chat_id=chat_id, 
-            text=f"Hello! 👋 I am an expert assistant for {SPECIFIC_TOPIC}. Ask me anything!"
-        )
-        return
-
-    # Handle /help
-    if user_text.startswith('/help'):
-        await bot.send_message(
-            chat_id=chat_id, 
-            text=f"Just send me your questions about: {SPECIFIC_TOPIC}."
-        )
-        return
-
-    # Process standard message with Gemini
+# ----------------------------------------------------------------------
+# API Endpoints
+# ----------------------------------------------------------------------
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_endpoint(request: ChatRequest):
+    """Endpoint to receive user messages and return Gemini responses."""
     if not client:
-        await bot.send_message(chat_id=chat_id, text="AI capabilities are offline.")
-        return
+        raise HTTPException(status_code=503, detail="AI Service is currently offline.")
+        
+    user_text = request.message.strip()
+    if not user_text:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
     try:
-        # Show 'typing' action
-        await bot.send_chat_action(chat_id=chat_id, action='typing')
-
         # Async call to Gemini API
         response = await client.aio.models.generate_content(
             model='gemini-2.5-flash',
@@ -86,37 +80,13 @@ async def process_update(update: Update):
         if not reply_text:
             reply_text = "I'm sorry, I couldn't generate a response."
             
-        await bot.send_message(chat_id=chat_id, text=reply_text)
+        return ChatResponse(reply=reply_text)
         
     except Exception as e:
         logger.error(f"Error calling Gemini API: {e}")
-        await bot.send_message(
-            chat_id=chat_id, 
-            text="Sorry, I encountered an error. The request might have timed out."
-        )
+        raise HTTPException(status_code=500, detail="Failed to generate response.")
 
-# ----------------------------------------------------------------------
-# API Endpoints
-# ----------------------------------------------------------------------
-@app.post("/api/webhook")
-async def telegram_webhook(request: Request):
-    """Endpoint to receive Webhook updates from Telegram."""
-    try:
-        # Parse the incoming JSON into a Telegram Update object
-        data = await request.json()
-        update = Update.de_json(data, bot)
-        
-        # Process the update
-        await process_update(update)
-        
-        # Respond to Telegram with 200 OK so it doesn't retry
-        return {"status": "ok"}
-    except Exception as e:
-        logger.error(f"Error processing webhook: {e}")
-        # Always return 200 OK to Telegram, even on error, to prevent retry loops
-        return {"status": "error"}
-
-@app.get("/")
-def home():
-    """Simple health check endpoint."""
-    return {"status": "Bot is running and ready for webhooks!"}
+# Optional: Add a simple health check root for the API
+@app.get("/api/health")
+def health_check():
+    return {"status": "Backend is running!"}
