@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     // Fallback to server-side environment variables if the client didn't provide a key
     if (!apiKey) {
       if (provider === 'gemini') {
-        apiKey = process.env.gemeni_api_for_elize || process.env.GEMINI_API_KEY;
+        apiKey = process.env.gemeni_api_for_elize || process.env['gemeni api for elize'] || process.env.key || process.env.GEMINI_API_KEY;
       } else if (provider === 'openai') {
         apiKey = process.env.OPENAI_API_KEY;
       } else if (provider === 'anthropic') {
